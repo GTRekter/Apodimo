@@ -59,7 +59,24 @@ class AzureDevOpsService {
         return text.read().toString();
     }
 
+    async getTeamMembersWithExtendedProperties(projectId, teamId) {
+        let coreApi = await this.connection.getCoreApi();
+        let data = await coreApi.getTeamMembersWithExtendedProperties(projectId, teamId);
+        return data;
+    }
 
+
+    async getTeamIterations(projectId, projectName, teamId, teamName) {
+        const teamContext = {
+            project: projectName,
+            projectId: projectId,
+            team: teamName,
+            teamId: teamId
+        };
+        let workApi = await this.connection.getWorkApi();
+        let data = await workApi.getTeamIterations(teamContext);
+        return data;
+    }
     async getTeams(project) {
         let coreApi = await this.connection.getCoreApi();
         let data = await coreApi.getTeams(project);
@@ -92,6 +109,5 @@ class AzureDevOpsService {
         let data = await workApi.getWorkItems(workItemIds);
         return data;
     }
-    WorkItemTrackingApi
 }
 module.exports = AzureDevOpsService;

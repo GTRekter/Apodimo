@@ -57,10 +57,10 @@ if(verbose) {
 //     console.log("Migrating work items");
 // }
 // migrateWorkItems();
-if(verbose) {
-    console.log("Migrating boards");
-}
-migrateBoards();
+// if(verbose) {
+//     console.log("Migrating boards");
+// }
+// migrateBoards();
 if(verbose) {
     console.log("Migration completed");
 }
@@ -155,5 +155,17 @@ function migrateWorkItems() {
         });  
 }
 function migrateBoards() {
-    
+    azureDevOpsService.getTeams(azdoProject)
+        .then(teams => {
+            teams.map(async team => {
+                const boards = await azureDevOpsService.getBoards(team.projectId, team.projectName, team.id, team.name);
+                boards.map(async board => {
+                    let boardDetails = await azureDevOpsService.getBoard(team.projectId, team.projectName, team.id, team.name, board.id);
+                    let project = await gitHubService.createProject("GTRekter", gitHubProject, `${team.name} ${boardDetails.name}`);
+                    boardDetails.columns.map(async column => {
+                        await gitHubService.createProjectColumn(project.id, column.name)
+                    });
+                });
+            });
+        });  
 }

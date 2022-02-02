@@ -109,5 +109,28 @@ class AzureDevOpsService {
         let data = await workApi.getWorkItems(workItemIds);
         return data;
     }
+
+    async getBoards(projectId, projectName, teamId, teamName) {
+        const teamContext = {
+            project: projectName,
+            projectId: projectId,
+            team: teamName,
+            teamId: teamId
+        };
+        let workApi = await this.connection.getWorkApi();
+        let data = await workApi.getBoards(teamContext);
+        return data;
+    }
+    async getBoard(projectId, projectName, teamId, teamName, boardId) {
+        const teamContext = {
+            project: projectName,
+            projectId: projectId,
+            team: teamName,
+            teamId: teamId
+        };
+        let workApi = await this.connection.getWorkApi();
+        let data = await workApi.getBoard(teamContext, boardId);
+        return data;
+    }
 }
 module.exports = AzureDevOpsService;

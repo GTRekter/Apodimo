@@ -18,7 +18,6 @@ class GitHubService {
     async getUser() {
         return await this.octokit.users.getAuthenticated();
     }
-
     async addCollaborator(owner, repo, username) {
         // * pull - can pull, but not push to or administer this repository.
         // * push - can pull and push, but not administer this repository.
@@ -32,8 +31,6 @@ class GitHubService {
             permission: "push"
         });
     }
-
-
     async createPage(owner, repo, branch, path = "/") {
         const { data } = await this.octokit.rest.repos.createPagesSite({
             owner: owner,
@@ -63,6 +60,28 @@ class GitHubService {
             state: state,
             description: description,
             due_on: due_on
+        });
+        return data;
+    }
+    async createProject(owner, repo, name) {
+        const { data } = await this.octokit.rest.projects.createForRepo({
+            owner: owner,
+            repo: repo,
+            name: name
+        });
+        return data;
+    }
+    async createProjectColumn(projectId, columnName) {
+        const { data } = await this.octokit.rest.projects.createColumn({
+            project_id: projectId,
+            name: columnName,
+        });
+        return data;
+    }
+    async getProjects(owner, repo) {
+        const { data } = await this.octokit.rest.projects.listForRepo({
+            owner: owner,
+            repo: repo,
         });
         return data;
     }

@@ -1,21 +1,28 @@
 {
   "name": "apodimo",
   "version": "1.0.0",
-  "description": "Not yet ready",
-  "keywords": [],
+  "description": "Command-line tool designed to migrate work items, pipelines, and wikis from one Azure DevOps/TFS project to a GitHub project",
+  "keywords": [
+    "Azure DevOps",
+    "GitHub",
+    "Migration",
+    "Azure Pipelines",
+    "Azure Boards"
+  ],
   "repository": "https://github.com/GTRekter/Apodimo.git",
   "author": "Ivan Porta (https://ivanporta.net)",
   "license": "MIT",
   "scripts": {
-    "start": "node app.js"
+    "start": "node index.js"
   },
   "bin": {
-    "apodimo": "app.js"
+    "apodimo": "index.js"
   },
   "dependencies": {
     "@octokit/rest": "^18.12.0",
     "azure-devops-node-api": "^11.1.0",
     "dotenv": "^14.3.2",
+    "figlet": "^1.5.2",
     "yargs": "^17.3.1"
   }
 }

@@ -5,13 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "pwa-node",
+            "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "program": "${workspaceFolder}\\app.js"
+            "program": "${workspaceFolder}/index.js",
+            "args": [
+                "--azdoProject=GTRekter",
+                "--gitHubProject=GTRekter",
+                "--gitHubToken=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",
+                "--azdoToken=yded3t4mpkaskyw2tzqg2qn7f2yykafgmovw25qhvsa5zk4oyxja",
+                "--azdoOrganizationUrl='https://gtrekter.visualstudio.com'"
+            ]
         }
+
     ]
 }

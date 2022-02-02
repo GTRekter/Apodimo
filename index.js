@@ -1,41 +1,70 @@
 #!/usr/bin/env node
 
 const yargs = require("yargs");
-const environment = require('dotenv');
+const figlet = require('figlet');
+const environment = require('dotenv').config();;
 const GitHubService = require('./services/githubService');
 const AzureDevOpsService = require('./services/azureDevOpsService');
 
-const azdoProject = "Public";
-const gitHubProject = "Public";
 let gitHubService = null;
 let azureDevOpsService = null;
-
-
-
+let azdoProject = null;
+let gitHubProject = null;
+let verbose = null;
 
 const options = yargs
- .usage("Usage: -n <name>")
- .option("n", { alias: "name", describe: "Your name", type: "string", demandOption: true })
- .argv;
+  .usage("Usage: -azdoProject <string> -gitHubProject <string> -gitHubToken <string> -azdoToken <string> -azdoUrl <string>")
+  .example("-azdoProject GTRekter -gitHubProject GTRekter -gitHubToken FY2W3hT9SsQI1JNUb -azdoToken D56jjHMXc5HSkvCFY2W3hT9SsQI1JNUb -azdoUrl 'https://contoso.visualstudio.com'")
+  .option("azdoProject", { alias: "azdoProject", describe: "Azure DevOps source project's name", type: "string", demandOption: true })
+  .option("azdoToken", { alias: "azdoToken", describe: "Azure DevOps PAT", type: "string", demandOption: true })
+  .option("azdoOrganizationUrl", { alias: "azdoOrganizationUrl", describe: "Azure DevOps source organization's URL", type: "string", demandOption: true })
+  .option("gitHubProject", { alias: "gitHubProject", describe: "GitHub destination project's name", type: "string", demandOption: true })
+  .option("gitHubToken", { alias: "gitHubToken", describe: "GitHub PAT", type: "string", demandOption: true })
+  .option("verbose", { alias: "verbose", describe: "Show verbose output", type: "boolean" })
+  .help()
+   .argv;
 
-const greeting = `Hello, ${options.name}!`;
+verbose = yargs.argv['verbose']
+azdoProject = yargs.argv['azdoProject'];
+gitHubProject = yargs.argv['gitHubProject'];
 
-console.log(greeting);
-
-
-
-
-
-async function run() {
-    gitHubService = new GitHubService(process.env.GITHUB_TOKEN);
-    azureDevOpsService = new AzureDevOpsService(process.env.AZURE_DEVOPS_TOKEN, process.env.AZURE_DEVOPS_URL);
-    
-    // migrateWiki();
-    // migrateTeamMembers();
-    // migrateIterations();
-    // migrateWorkItems();  
-    migrateBoards();
+if(verbose) {
+    console.log(figlet.textSync('Apodimo', { horizontalLayout: 'full' }));
+    console.log("Tool designed to migrate data from Azure DevOps to GitHub");
 }
+if(verbose) {
+    console.log("Generating new service instances...");
+}
+gitHubService = new GitHubService(yargs.argv['gitHubToken']);
+azureDevOpsService = new AzureDevOpsService(yargs.argv['azdoToken'], yargs.argv['azdoOrganizationUrl']);
+if(verbose) {
+    console.log("Starting migration...");
+}
+// if(verbose) {
+//     console.log("Starting migration...");
+//     console.log("Migrating wiki");
+// }
+// migrateWiki();
+// if(verbose) {
+//     console.log("Migrating team members");
+// }
+// migrateTeamMembers();
+// if(verbose) {
+//     console.log("Migrating iterations");
+// }
+// migrateIterations();
+// if(verbose) {
+//     console.log("Migrating work items");
+// }
+// migrateWorkItems();
+if(verbose) {
+    console.log("Migrating boards");
+}
+migrateBoards();
+if(verbose) {
+    console.log("Migration completed");
+}
+
 
 function migrateTeamMembers() { 
     azureDevOpsService.getTeams(azdoProject)
@@ -125,10 +154,6 @@ function migrateWorkItems() {
             });
         });  
 }
-
 function migrateBoards() {
     
 }
-
-// environment.config();
-// run();

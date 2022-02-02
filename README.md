@@ -1,5 +1,5 @@
-# Introduction
-Apodimo is a command line tool designed with the following goals in mind:
+# Introductioncommand line tool 
+Apodimo is a designed with the following goals in mind:
 - Migrate work items, pipelines, and wikis from one Azure DevOps/TFS project to a GitHub project
 - Real world example of how to use the REST APIs
 - Cross platform support
@@ -29,10 +29,9 @@ In this project I used the following libraries:
 3. Select **+ New Token**.
 4. Select the **Full Control** scope 
 
-## Environment variables
-Create a new **.env** file with the following variables:
+# Run
+To run the script you can:
 ```
-GITHUB_TOKEN=PERSONAL-ACCESS-TOKEN
-AZURE_DEVOPS_TOKEN=PERSONAL-ACCESS-TOKEN
-AZURE_DEVOPS_URL=https://{organization}.visualstudio.com
+node index.js --azdoProject GTRekter --gitHubProject GTRekter --gitHubToken FY2W3hT9SsQI1JNUb --azdoToken D56jjHMXc5HSkvCFY2W3hT9SsQI1JNUb --azdoOrganizationUrl 'https://contoso.visualstudio.com'
+
 ```

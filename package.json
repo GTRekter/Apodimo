@@ -2,13 +2,20 @@
   "name": "apodimo",
   "version": "1.0.0",
   "description": "Not yet ready",
-  "main": "app.js",
+  "keywords": [],
   "repository": "https://github.com/GTRekter/Apodimo.git",
-  "author": "ivan.porta.web@gmail.com",
+  "author": "Ivan Porta (https://ivanporta.net)",
   "license": "MIT",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "bin": {
+    "apodimo": "app.js"
+  },
   "dependencies": {
     "@octokit/rest": "^18.12.0",
     "azure-devops-node-api": "^11.1.0",
-    "dotenv": "^14.3.2"
+    "dotenv": "^14.3.2",
+    "yargs": "^17.3.1"
   }
 }

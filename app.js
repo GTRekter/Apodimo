@@ -1,3 +1,6 @@
+#!/usr/bin/env node
+
+const yargs = require("yargs");
 const environment = require('dotenv');
 const GitHubService = require('./services/githubService');
 const AzureDevOpsService = require('./services/azureDevOpsService');
@@ -7,14 +10,31 @@ const gitHubProject = "Public";
 let gitHubService = null;
 let azureDevOpsService = null;
 
+
+
+
+const options = yargs
+ .usage("Usage: -n <name>")
+ .option("n", { alias: "name", describe: "Your name", type: "string", demandOption: true })
+ .argv;
+
+const greeting = `Hello, ${options.name}!`;
+
+console.log(greeting);
+
+
+
+
+
 async function run() {
     gitHubService = new GitHubService(process.env.GITHUB_TOKEN);
     azureDevOpsService = new AzureDevOpsService(process.env.AZURE_DEVOPS_TOKEN, process.env.AZURE_DEVOPS_URL);
+    
     // migrateWiki();
-
-    migrateTeamMembers();
-    //migrateIterations();
-    //migrateWorkItems();  
+    // migrateTeamMembers();
+    // migrateIterations();
+    // migrateWorkItems();  
+    migrateBoards();
 }
 
 function migrateTeamMembers() { 
@@ -106,5 +126,9 @@ function migrateWorkItems() {
         });  
 }
 
-environment.config();
-run();
+function migrateBoards() {
+    
+}
+
+// environment.config();
+// run();

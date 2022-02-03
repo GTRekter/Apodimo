@@ -8,10 +8,15 @@ const environment = require('dotenv').config();;
 const GitHubService = require('./services/githubService');
 const AzureDevOpsService = require('./services/azureDevOpsService');
 
+
 let gitHubService = null;
 let azureDevOpsService = null;
+
 let azdoProject = null;
 let gitHubProject = null;
+let gitHubOrganizationName = null;
+// TODO: get username from this.octokit.users.getAuthenticated()
+let gitHubUsername = "GTRekter";
 let verbose = null;
 
 const options = yargs
@@ -22,6 +27,7 @@ const options = yargs
   .option("azdoOrganizationUrl", { alias: "azdoOrganizationUrl", describe: "Azure DevOps source organization's URL", type: "string", demandOption: true })
   .option("gitHubProject", { alias: "gitHubProject", describe: "GitHub destination project's name", type: "string", demandOption: true })
   .option("gitHubToken", { alias: "gitHubToken", describe: "GitHub PAT", type: "string", demandOption: true })
+  .option("gitHubOrganizationName", { alias: "gitHubOrganizationName", describe: "GitHub organization's name", type: "string", demandOption: true })
   .option("verbose", { alias: "verbose", describe: "Show verbose output", type: "boolean" })
   .help()
    .argv;
@@ -39,18 +45,21 @@ if(verbose) {
 }
 gitHubService = new GitHubService(yargs.argv['gitHubToken']);
 azureDevOpsService = new AzureDevOpsService(yargs.argv['azdoToken'], yargs.argv['azdoOrganizationUrl']);
+
 if(verbose) {
     console.log("Starting migration...");
 }
+// if(verbose) {
+//     console.log("Migrating repositories...");
+// }
+// migrateRepositories();
+// if(verbose) {
+//     console.log("Migrating boards...");
+// }
+// migrateBoards();
 if(verbose) {
-    console.log("Migrating repositories...");
+    console.log("Migration concluded.");
 }
-migrateRepositories();
-if(verbose) {
-    console.log("Migrating boards...");
-}
-migrateBoards();
-    
 
 
 // if(verbose) {
@@ -87,7 +96,7 @@ function migrateRepositories() {
             repos.map(async repo => {
                 let temporaryFolder = os.tmpdir();
                 log(`Creating a new repo in GitHub for the Azure DevOps repo: ${repo.name}`);
-                const gitHubRepository = await gitHubService.createRepository("origin-technologies", repo.name);
+                const gitHubRepository = await gitHubService.createRepository(gitHubOrganizationName, repo.name);
                 log(`Cloning the Azure DevOps repo: ${repo.name} to the temporary folder ${temporaryFolder}/${repo.name}`);
                 shell.exec(`git clone --bare ${repo.remoteUrl} ${temporaryFolder}\\${repo.name}`);
                 shell.cd(`${temporaryFolder}/${repo.name}`);
@@ -125,10 +134,10 @@ function migrateBoards() {
                             let project = null;
                             if(repos.length > 1) {
                                 log(`Creating a new org project in GitHub for the Azure DevOps board: ${team.name} ${boardDetails.name}`);
-                                project = await gitHubService.createOrgProject("origin-technologies", `${team.name} ${boardDetails.name}`);
+                                project = await gitHubService.createOrgProject(gitHubOrganizationName, `${team.name} ${boardDetails.name}`);
                             } else {
                                 log(`Creating a new repo project in GitHub for the Azure DevOps board: ${team.name} ${boardDetails.name}`);
-                                project = await gitHubService.createRepoProject("GTRekter", gitHubProject, `${team.name} ${boardDetails.name}`);
+                                project = await gitHubService.createRepoProject(gitHubUsername, gitHubProject, `${team.name} ${boardDetails.name}`);
                                 // TODO: Link repositories to the project
                             }
                             boardDetails.columns.map(async column => {
@@ -154,7 +163,7 @@ function migrateTeamMembers() {
                         users.map(async user => {
                             if(usersAdded.indexOf(user.identity.uniqueName) === -1) {
                                 usersAdded.push(user.identity.uniqueName);
-                                await gitHubService.addCollaborator("GTRekter", gitHubProject, user.identity.uniqueName); 
+                                await gitHubService.addCollaborator(gitHubUsername, gitHubProject, user.identity.uniqueName); 
                             }
                         });
                     });

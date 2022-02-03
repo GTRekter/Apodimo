@@ -132,5 +132,11 @@ class AzureDevOpsService {
         let data = await workApi.getBoard(teamContext, boardId);
         return data;
     }
+
+    async getRepos(projectName, includeLinks, includeAllUrls, includeHidden) {
+        let gitApi = await this.connection.getGitApi();
+        let data = await gitApi.getRepositories(projectName, includeLinks, includeAllUrls, includeHidden);
+        return data;
+    }
 }
 module.exports = AzureDevOpsService;

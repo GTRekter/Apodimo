@@ -63,11 +63,18 @@ class GitHubService {
         });
         return data;
     }
-    async createProject(owner, repo, name) {
+    async createRepoProject(owner, repo, name) {
         const { data } = await this.octokit.rest.projects.createForRepo({
             owner: owner,
             repo: repo,
             name: name
+        });
+        return data;
+    }
+    async createOrgProject(org, name) {
+        const { data } = await this.octokit.rest.projects.createForOrg({
+            org: org,
+            name: name,
         });
         return data;
     }
@@ -85,5 +92,25 @@ class GitHubService {
         });
         return data;
     }
+    async createRepository(org, name) {
+        const { data } = await this.octokit.rest.repos.createInOrg({
+            org: org,
+            name: name,
+        });
+        return data;
+    }
+
+    
+    // TODO: content_id and content_type are required but there are no insights about what they should be https://octokit.github.io/rest.js/v18#projects. maybe we just have to add #IDISSE to the notes to relate an issue with the column
+    // async createCard(column_id, note, content_id, content_type) {
+    //     const { data } = await this.octokit.rest.projects.createCard({
+    //         column_id,
+    //         note,
+    //         content_id,
+    //         content_type,
+    //     });
+    //     return data;
+    // }
+    
 }
 module.exports = GitHubService;

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+const os = require("os");
+const shell = require('shelljs')
 const yargs = require("yargs");
 const figlet = require('figlet');
 const environment = require('dotenv').config();;
@@ -40,6 +42,17 @@ azureDevOpsService = new AzureDevOpsService(yargs.argv['azdoToken'], yargs.argv[
 if(verbose) {
     console.log("Starting migration...");
 }
+if(verbose) {
+    console.log("Migrating repositories...");
+}
+migrateRepositories();
+if(verbose) {
+    console.log("Migrating boards...");
+}
+migrateBoards();
+    
+
+
 // if(verbose) {
 //     console.log("Starting migration...");
 //     console.log("Migrating wiki");
@@ -57,15 +70,76 @@ if(verbose) {
 //     console.log("Migrating work items");
 // }
 // migrateWorkItems();
-// if(verbose) {
-//     console.log("Migrating boards");
-// }
-// migrateBoards();
-if(verbose) {
-    console.log("Migration completed");
+
+
+
+
+function log(string) {
+    if(verbose) {
+        console.log(string);
+    }
 }
-
-
+function migrateRepositories() {
+    azureDevOpsService
+        .getRepos(azdoProject, true, true, false)
+        .then(repos => {
+            log("Found " + repos.length + " repos in Azure DevOps project " + azdoProject);
+            repos.map(async repo => {
+                let temporaryFolder = os.tmpdir();
+                log(`Creating a new repo in GitHub for the Azure DevOps repo: ${repo.name}`);
+                const gitHubRepository = await gitHubService.createRepository("origin-technologies", repo.name);
+                log(`Cloning the Azure DevOps repo: ${repo.name} to the temporary folder ${temporaryFolder}/${repo.name}`);
+                shell.exec(`git clone --bare ${repo.remoteUrl} ${temporaryFolder}\\${repo.name}`);
+                shell.cd(`${temporaryFolder}/${repo.name}`);
+                log(`Puhsing the Azure DevOps repo: ${repo.name} to the GitHub repo: ${gitHubRepository.name}`);
+                shell.exec(`git push --mirror ${gitHubRepository.clone_url}`);
+                shell.cd(`..`);
+                log(`Removing the temporary folder: ${temporaryFolder}/${repo.name}`);
+                shell.exec(`rm -rf ${repo.name}`);
+            });
+        }); 
+}
+function migrateBoards() {
+    /*
+    1. Check if there are more than one repos in the project
+    YES: 
+    - Create a new repo in GitHub for each repo in Azure DevOps
+    - Create a new org project linked to all of the previously created repos
+    NO: 
+    - Create a new repo in GitHub for the project
+    - Create a new repo project 
+    */
+    azureDevOpsService
+        .getRepos(azdoProject, true, true, false)
+        .then(repos => {
+            log(`Found ${repos.length} repos in Azure DevOps project ${azdoProject}`);
+            azureDevOpsService
+                .getTeams(azdoProject)
+                .then(teams => {
+                    teams.map(async team => {
+                        log(`Found ${teams.length} teams in Azure DevOps project ${azdoProject}`);
+                        const boards = await azureDevOpsService.getBoards(team.projectId, team.projectName, team.id, team.name);
+                        boards.map(async board => {
+                            log(`Found ${boards.length} boards in Azure DevOps project ${azdoProject}`);
+                            let boardDetails = await azureDevOpsService.getBoard(team.projectId, team.projectName, team.id, team.name, board.id);             
+                            let project = null;
+                            if(repos.length > 1) {
+                                log(`Creating a new org project in GitHub for the Azure DevOps board: ${team.name} ${boardDetails.name}`);
+                                project = await gitHubService.createOrgProject("origin-technologies", `${team.name} ${boardDetails.name}`);
+                            } else {
+                                log(`Creating a new repo project in GitHub for the Azure DevOps board: ${team.name} ${boardDetails.name}`);
+                                project = await gitHubService.createRepoProject("GTRekter", gitHubProject, `${team.name} ${boardDetails.name}`);
+                                // TODO: Link repositories to the project
+                            }
+                            boardDetails.columns.map(async column => {
+                                await gitHubService.createProjectColumn(project.id, column.name)
+                                // TODO create card to each column
+                            });
+                        });
+                    });
+                }); 
+            }); 
+}
 function migrateTeamMembers() { 
     azureDevOpsService.getTeams(azdoProject)
         .then(teams => {
@@ -150,21 +224,6 @@ function migrateWorkItems() {
                             await gitHubService.createIssue("GTRekter", gitHubProject, workItem.fields["System.Title"], body, milestone, labels);
                         });
                     }
-                });
-            });
-        });  
-}
-function migrateBoards() {
-    azureDevOpsService.getTeams(azdoProject)
-        .then(teams => {
-            teams.map(async team => {
-                const boards = await azureDevOpsService.getBoards(team.projectId, team.projectName, team.id, team.name);
-                boards.map(async board => {
-                    let boardDetails = await azureDevOpsService.getBoard(team.projectId, team.projectName, team.id, team.name, board.id);
-                    let project = await gitHubService.createProject("GTRekter", gitHubProject, `${team.name} ${boardDetails.name}`);
-                    boardDetails.columns.map(async column => {
-                        await gitHubService.createProjectColumn(project.id, column.name)
-                    });
                 });
             });
         });  

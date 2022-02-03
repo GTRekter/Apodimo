@@ -1,4 +1,4 @@
-# Introductioncommand line tool 
+# Introduction
 Apodimo is a designed with the following goals in mind:
 - Migrate work items, pipelines, and wikis from one Azure DevOps/TFS project to a GitHub project
 - Real world example of how to use the REST APIs
@@ -7,6 +7,7 @@ Apodimo is a designed with the following goals in mind:
 In this project I used the following libraries:
 
 **Azure DevOps**: 
+- https://github.com/Microsoft/azure-devops-node-api
 - https://docs.microsoft.com/en-us/rest/api/azure/devops/wiki/wikis/get?view=azure-devops-rest-7.1
 
 **GitHub:** 
@@ -32,6 +33,5 @@ In this project I used the following libraries:
 # Run
 To run the script you can:
 ```
-node index.js --azdoProject GTRekter --gitHubProject GTRekter --gitHubToken FY2W3hT9SsQI1JNUb --azdoToken D56jjHMXc5HSkvCFY2W3hT9SsQI1JNUb --azdoOrganizationUrl 'https://contoso.visualstudio.com'
-
+node index.js --azdoProject GTRekter --gitHubProject GTRekter --gitHubToken FY2W3hT9SsQI1JNUb --azdoToken D56jjHMXc5HSkvCFY2W3hT9SsQI1JNUb --azdoOrganizationUrl 'https://contoso.visualstudio.com' --gitHubOrganizationName=origin" --verbose=true
 ```

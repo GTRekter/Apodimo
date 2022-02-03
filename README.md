@@ -1,5 +1,6 @@
 ![Build](https://github.com/GTRekter/Apodimo/actions/workflows/analysis.yml/badge.svg)
 ![issues](https://img.shields.io/github/issues/GTRekter/Apodimo)
+![license](https://img.shields.io/github/license/GTRekter/Apodimo)
 
 # Introduction
 Apodimo is a designed with the following goals in mind:

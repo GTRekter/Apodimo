@@ -49,19 +49,23 @@ azureDevOpsService = new AzureDevOpsService(yargs.argv['azdoToken'], yargs.argv[
 if(verbose) {
     console.log("Starting migration...");
 }
-// if(verbose) {
-//     console.log("Migrating repositories...");
-// }
-// migrateRepositories();
-// if(verbose) {
-//     console.log("Migrating boards...");
-// }
-// migrateBoards();
 if(verbose) {
-    console.log("Migration concluded.");
+    console.log("Migrating repositories...");
 }
+migrateRepositories();
+if(verbose) {
+    console.log("Migrating boards...");
+}
+migrateBoards();
 
-
+if(verbose) {
+    console.log("Migrating iterations...");
+}
+migrateIterations();
+if(verbose) {
+    console.log("Migrating work-items...");
+}
+migrateWorkItems();
 // if(verbose) {
 //     console.log("Starting migration...");
 //     console.log("Migrating wiki");
@@ -71,14 +75,11 @@ if(verbose) {
 //     console.log("Migrating team members");
 // }
 // migrateTeamMembers();
-// if(verbose) {
-//     console.log("Migrating iterations");
-// }
-// migrateIterations();
-// if(verbose) {
-//     console.log("Migrating work items");
-// }
-// migrateWorkItems();
+if(verbose) {
+    console.log("Migration concluded.");
+}
+
+
 
 
 

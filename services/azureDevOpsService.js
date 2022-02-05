@@ -6,20 +6,17 @@ class AzureDevOpsService {
         let authHandler = vsoNodeApi.getPersonalAccessTokenHandler(token); 
         this.connection = new vsoNodeApi.WebApi(serverUrl, authHandler);   
     }
+    // GET Methods
     async getRepos() {
         let gitApi = await this.connection.getGitApi();
         let repos = await gitApi.getRepositories();
         return repos;
     }
-
     async getWikis() {
         let wikiApi = await this.connection.getWikiApi();
         let data = await wikiApi.getWikis();
         return data;
     }
-
-
-
     async getWikisByProjectName(project) {
         let wikiApi = await this.connection.getWikiApi();
         let wikis = await wikiApi.getAllWikis(project);
@@ -58,14 +55,11 @@ class AzureDevOpsService {
         let text = await wikiApi.getPageText(project, id, path, "None", null, true);
         return text.read().toString();
     }
-
     async getTeamMembersWithExtendedProperties(projectId, teamId) {
         let coreApi = await this.connection.getCoreApi();
         let data = await coreApi.getTeamMembersWithExtendedProperties(projectId, teamId);
         return data;
     }
-
-
     async getTeamIterations(projectId, projectName, teamId, teamName) {
         const teamContext = {
             project: projectName,
@@ -109,7 +103,6 @@ class AzureDevOpsService {
         let data = await workApi.getWorkItems(workItemIds);
         return data;
     }
-
     async getBoards(projectId, projectName, teamId, teamName) {
         const teamContext = {
             project: projectName,
@@ -132,7 +125,6 @@ class AzureDevOpsService {
         let data = await workApi.getBoard(teamContext, boardId);
         return data;
     }
-
     async getRepos(projectName, includeLinks, includeAllUrls, includeHidden) {
         let gitApi = await this.connection.getGitApi();
         let data = await gitApi.getRepositories(projectName, includeLinks, includeAllUrls, includeHidden);

@@ -7,7 +7,8 @@ class GitHubService {
             auth: token
         });
     }
-    async getRepos() {
+    // GET Methods
+    async getRepositories() {
         return await this.octokit.repos.listForAuthenticatedUser({
             type: "owner",
             sort: "updated",
@@ -15,9 +16,39 @@ class GitHubService {
             per_page: 100
         });
     }
+    async getRepositoriesForOrganization(org) {
+        return await this.octokit.rest.repos.listForOrg({
+            org: org
+        });
+    }   
+    async getRepository(owner, repo) {
+        return await this.octokit.rest.repos.get({
+            owner: owner,
+            repo: repo
+        });
+    } 
+    async getRepositoryForOrganization(org, repositoryName) {
+        const data = await this.octokit.rest.repos.listForOrg({
+            org: org
+        });
+        const repo = data.data.find(repo => repo.name === repositoryName);
+        if(repo === undefined) {
+            return null;
+        } else {
+            return repo;
+        }
+    }  
     async getUser() {
         return await this.octokit.users.getAuthenticated();
     }
+    async getProjects(owner, repo) {
+        const { data } = await this.octokit.rest.projects.listForRepo({
+            owner: owner,
+            repo: repo,
+        });
+        return data;
+    }
+    // Create/Add Methods
     async addCollaborator(owner, repo, username) {
         // * pull - can pull, but not push to or administer this repository.
         // * push - can pull and push, but not administer this repository.
@@ -85,13 +116,6 @@ class GitHubService {
         });
         return data;
     }
-    async getProjects(owner, repo) {
-        const { data } = await this.octokit.rest.projects.listForRepo({
-            owner: owner,
-            repo: repo,
-        });
-        return data;
-    }
     async createRepository(org, name) {
         const { data } = await this.octokit.rest.repos.createInOrg({
             org: org,
@@ -99,8 +123,6 @@ class GitHubService {
         });
         return data;
     }
-
-    
     // TODO: content_id and content_type are required but there are no insights about what they should be https://octokit.github.io/rest.js/v18#projects. maybe we just have to add #IDISSE to the notes to relate an issue with the column
     // async createCard(column_id, note, content_id, content_type) {
     //     const { data } = await this.octokit.rest.projects.createCard({
@@ -110,7 +132,6 @@ class GitHubService {
     //         content_type,
     //     });
     //     return data;
-    // }
-    
+    // }  
 }
 module.exports = GitHubService;

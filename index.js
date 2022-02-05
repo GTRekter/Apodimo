@@ -8,7 +8,6 @@ const environment = require('dotenv').config();;
 const GitHubService = require('./services/githubService');
 const AzureDevOpsService = require('./services/azureDevOpsService');
 
-
 let gitHubService = null;
 let azureDevOpsService = null;
 
@@ -20,8 +19,8 @@ let gitHubUsername = "GTRekter";
 let verbose = null;
 
 const options = yargs
-  .usage("Usage: -azdoProject <string> -gitHubProject <string> -gitHubToken <string> -azdoToken <string> -azdoUrl <string>")
-  .example("-azdoProject GTRekter -gitHubProject GTRekter -gitHubToken FY2W3hT9SsQI1JNUb -azdoToken D56jjHMXc5HSkvCFY2W3hT9SsQI1JNUb -azdoUrl 'https://contoso.visualstudio.com'")
+  .usage("Usage: -azdoProject <string> -azdoToken <string> -azdoUrl <string> -gitHubProject <string> -gitHubToken <string> -gitHubOrganizationName <string> -verbose")
+  .example("-azdoProject GTRekter -azdoToken D56jjHMXc5HSkvCFY2W3hT9SsQI1JNUb -azdoUrl 'https://contoso.visualstudio.com' -gitHubProject GTRekter -gitHubToken FY2W3hT9SsQI1JNUb gitHubOrganizationName Contoso ")
   .option("azdoProject", { alias: "azdoProject", describe: "Azure DevOps source project's name", type: "string", demandOption: true })
   .option("azdoToken", { alias: "azdoToken", describe: "Azure DevOps PAT", type: "string", demandOption: true })
   .option("azdoOrganizationUrl", { alias: "azdoOrganizationUrl", describe: "Azure DevOps source organization's URL", type: "string", demandOption: true })
@@ -35,69 +34,54 @@ const options = yargs
 verbose = yargs.argv['verbose']
 azdoProject = yargs.argv['azdoProject'];
 gitHubProject = yargs.argv['gitHubProject'];
+gitHubOrganizationName = yargs.argv['gitHubOrganizationName'];
 
-if(verbose) {
-    console.log(figlet.textSync('Apodimo', { horizontalLayout: 'full' }));
-    console.log("Tool designed to migrate data from Azure DevOps to GitHub");
-}
-if(verbose) {
-    console.log("Generating new service instances...");
-}
+log(figlet.textSync('Apodimo', { horizontalLayout: 'full' }));
+log("Tool designed to migrate data from Azure DevOps to GitHub");
+log(`Version: ${process.version}`);
+log("Generating new service instances...");
 gitHubService = new GitHubService(yargs.argv['gitHubToken']);
 azureDevOpsService = new AzureDevOpsService(yargs.argv['azdoToken'], yargs.argv['azdoOrganizationUrl']);
-
-if(verbose) {
-    console.log("Starting migration...");
-}
-if(verbose) {
-    console.log("Migrating repositories...");
-}
+log("Starting migration...");
 migrateRepositories();
-if(verbose) {
-    console.log("Migrating boards...");
-}
-migrateBoards();
-
-if(verbose) {
-    console.log("Migrating iterations...");
-}
-migrateIterations();
-if(verbose) {
-    console.log("Migrating work-items...");
-}
-migrateWorkItems();
-// if(verbose) {
-//     console.log("Starting migration...");
-//     console.log("Migrating wiki");
-// }
+// migrateBoards();
+// migrateIterations();
+// migrateWorkItems();
 // migrateWiki();
-// if(verbose) {
-//     console.log("Migrating team members");
-// }
 // migrateTeamMembers();
-if(verbose) {
-    console.log("Migration concluded.");
-}
+// log("Migration concluded.");
+
+process.on('unhandledRejection', error => {
+    // Won't execute
+    console.error('unhandledRejection', error);
+});
 
 
 
 
-
-
+// Functions
 function log(string) {
     if(verbose) {
         console.log(string);
     }
 }
 function migrateRepositories() {
+    log("Migrating repositories...");
     azureDevOpsService
         .getRepos(azdoProject, true, true, false)
         .then(repos => {
-            log("Found " + repos.length + " repos in Azure DevOps project " + azdoProject);
+            log(`Found ${repos.length} repos in Azure DevOps project ${azdoProject}`);
             repos.map(async repo => {
+                log(`Checking if repository ${repo.name} exists in GitHub`);
+                let gitHubRepository = await gitHubService.getRepositoryForOrganization(gitHubOrganizationName, repo.name);;
+                if(gitHubRepository == null) {
+                    log(`Repository ${repo.name} does not exist in GitHub. Creating...`);
+                    gitHubRepository = await gitHubService.createRepository(gitHubOrganizationName, repo.name);  
+                } else {
+                    log(`Repository ${repo.name} already exists in GitHub. Skipping...`);
+                    return; 
+                }
                 let temporaryFolder = os.tmpdir();
-                log(`Creating a new repo in GitHub for the Azure DevOps repo: ${repo.name}`);
-                const gitHubRepository = await gitHubService.createRepository(gitHubOrganizationName, repo.name);
                 log(`Cloning the Azure DevOps repo: ${repo.name} to the temporary folder ${temporaryFolder}/${repo.name}`);
                 shell.exec(`git clone --bare ${repo.remoteUrl} ${temporaryFolder}\\${repo.name}`);
                 shell.cd(`${temporaryFolder}/${repo.name}`);
@@ -106,6 +90,7 @@ function migrateRepositories() {
                 shell.cd(`..`);
                 log(`Removing the temporary folder: ${temporaryFolder}/${repo.name}`);
                 shell.exec(`rm -rf ${repo.name}`);
+                log(`Migration of repository ${repo.name} completed.`);
             });
         }); 
 }
@@ -119,11 +104,12 @@ function migrateBoards() {
     - Create a new repo in GitHub for the project
     - Create a new repo project 
     */
+    log("Migrating boards...");
     azureDevOpsService
         .getRepos(azdoProject, true, true, false)
-        .then(repos => {
+        .then(async repos => {
             log(`Found ${repos.length} repos in Azure DevOps project ${azdoProject}`);
-            azureDevOpsService
+            await azureDevOpsService
                 .getTeams(azdoProject)
                 .then(teams => {
                     teams.map(async team => {
@@ -150,7 +136,23 @@ function migrateBoards() {
                 }); 
             }); 
 }
+function migrateIterations() {
+    log("Migrating iterations...");
+    azureDevOpsService
+        .getTeams(azdoProject)
+        .then(teams => {
+            teams.map(async team => {
+                const iterations = await azureDevOpsService.getTeamIterations(team.projectId, team.projectName, team.id, team.name);
+                iterations.map(async iteration => {
+                    let milliseconds = Date.parse(iteration.attributes.finishDate);
+                    let utcDateTime = new Date(milliseconds).toISOString();
+                    await gitHubService.createMilestone(gitHubUsername, gitHubProject, iteration.name, "open", "", utcDateTime);
+                });
+            });
+        });  
+}
 function migrateTeamMembers() { 
+    log("Migrating team members...");
     azureDevOpsService.getTeams(azdoProject)
         .then(teams => {
             //let usersToAdd = [];
@@ -172,6 +174,7 @@ function migrateTeamMembers() {
         })
 }
 function migrateWiki() {
+    log("Migrating wiki...");
     azureDevOpsService.getWikisByProjectName(azdoProject)
         .then(wikis => {
             wikis.map(async wiki => {
@@ -185,20 +188,8 @@ function migrateWiki() {
             });
         });  
 }
-function migrateIterations() {
-    azureDevOpsService.getTeams(azdoProject)
-        .then(teams => {
-            teams.map(async team => {
-                const iterations = await azureDevOpsService.getTeamIterations(team.projectId, team.projectName, team.id, team.name);
-                iterations.map(async iteration => {
-                    let milliseconds = Date.parse(iteration.attributes.finishDate);
-                    let utcDateTime = new Date(milliseconds).toISOString();
-                    await gitHubService.createMilestone("GTRekter", gitHubProject, iteration.name, "open", "", utcDateTime);
-                });
-            });
-        });  
-}
 function migrateWorkItems() {
+    log("Migrating workitems...");
     azureDevOpsService.getTeams(azdoProject)
         .then(teams => {
             teams.map(async team => {

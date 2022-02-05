@@ -1,3 +1,7 @@
+![Build](https://github.com/GTRekter/Apodimo/actions/workflows/analysis.yml/badge.svg)
+![issues](https://img.shields.io/github/issues/GTRekter/Apodimo)
+![license](https://img.shields.io/github/license/GTRekter/Apodimo)
+
 # Introduction
 Apodimo is a designed with the following goals in mind:
 - Migrate work items, pipelines, and wikis from one Azure DevOps/TFS project to a GitHub project
@@ -33,6 +37,5 @@ In this project I used the following libraries:
 # Run
 To run the script you can:
 ```
-node index.js --azdoProject GTRekter --gitHubProject GTRekter --gitHubToken FY2W3hT9SsQI1JNUb --azdoToken D56jjHMXc5HSkvCFY2W3hT9SsQI1JNUb --azdoOrganizationUrl 'https://contoso.visualstudio.com'
-
+node index.js --azdoProject GTRekter --gitHubProject GTRekter --gitHubToken FY2W3hT9SsQI1JNUb --azdoToken D56jjHMXc5HSkvCFY2W3hT9SsQI1JNUb --azdoOrganizationUrl 'https://contoso.visualstudio.com' --gitHubOrganizationName=origin" --verbose=true
 ```

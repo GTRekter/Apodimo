@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 
 const os = require("os");
-const shell = require('shelljs')
+const shell = require('shelljs');
 const yargs = require("yargs");
 const figlet = require('figlet');
-const environment = require('dotenv').config();;
+const environment = require('dotenv').config();
+const LogService = require("./services/logService");
 const GitHubService = require('./services/githubService');
 const AzureDevOpsService = require('./services/azureDevOpsService');
 
+let logService = null;
 let gitHubService = null;
 let azureDevOpsService = null;
 
@@ -16,7 +18,6 @@ let gitHubProject = null;
 let gitHubOrganizationName = null;
 // TODO: get username from this.octokit.users.getAuthenticated()
 let gitHubUsername = "GTRekter";
-let verbose = null;
 
 const options = yargs
   .usage("Usage: -azdoProject <string> -azdoToken <string> -azdoUrl <string> -gitHubProject <string> -gitHubToken <string> -gitHubOrganizationName <string> -verbose")
@@ -31,19 +32,20 @@ const options = yargs
   .help()
    .argv;
 
-verbose = yargs.argv['verbose']
 azdoProject = yargs.argv['azdoProject'];
 gitHubProject = yargs.argv['gitHubProject'];
 gitHubOrganizationName = yargs.argv['gitHubOrganizationName'];
+logService = new LogService(!!yargs.argv['verbose']);
 
-log(figlet.textSync('Apodimo', { horizontalLayout: 'full' }));
-log("Tool designed to migrate data from Azure DevOps to GitHub");
-log(`Version: ${process.version}`);
-log("Generating new service instances...");
+logService.general(figlet.textSync('Apodimo', { horizontalLayout: 'full' }));
+logService.general("Tool designed to migrate data from Azure DevOps to GitHub");
+logService.general(`Version: ${process.version}`);
+logService.verbose("Generating new service instances...");
 gitHubService = new GitHubService(yargs.argv['gitHubToken']);
 azureDevOpsService = new AzureDevOpsService(yargs.argv['azdoToken'], yargs.argv['azdoOrganizationUrl']);
-log("Starting migration...");
-migrateRepositories();
+logService.info("Starting migration...");
+// migrateRepositories();
+// cleanProjects(); // IMPORTANT: This function delete all the projects in GitHub. To use only for testing purposes.
 migrateBoards();
 // migrateIterations();
 // migrateWorkItems();
@@ -53,46 +55,52 @@ migrateBoards();
 
 process.on('unhandledRejection', error => {
     // Won't execute
-    console.error('unhandledRejection', error);
+    logService.error('unhandledRejection', error);
 });
 
 
-
-
 // Functions
-function log(string) {
-    if(verbose) {
-        console.log(string);
-    }
-}
+
 function migrateRepositories() {
-    log("Migrating repositories...");
+    logService.info(`Migrating repositories...`);
     azureDevOpsService
         .getRepos(azdoProject, true, true, false)
         .then(repos => {
-            log(`Found ${repos.length} repos in Azure DevOps project ${azdoProject}: ${repos.map(repo => repo.name)}`);
+            logService.verbose(`Found ${repos.length} repos in Azure DevOps project ${azdoProject}: ${repos.map(repo => repo.name)}`);
             repos.map(async repo => {
-                log(`Checking if repository ${repo.name} exists in GitHub`);
-                let gitHubRepository = await gitHubService.getRepositoryForOrganization(gitHubOrganizationName, repo.name);;
+                logService.verbose(`Checking if repository ${repo.name} exists in GitHub`);
+                let gitHubRepository = await gitHubService
+                    .getRepositoryForOrganization(gitHubOrganizationName, repo.name)
+                    .catch(error => {
+                        logService.error(`Error getting repository ${repo.name} in GitHub: ${error}`);
+                        return null;
+                    });
                 if(gitHubRepository == null) {
-                    log(`Repository ${repo.name} does not exist in GitHub. Creating...`);
-                    gitHubRepository = await gitHubService.createRepository(gitHubOrganizationName, repo.name);  
+                    logService.verbose(`Repository ${repo.name} does not exist in GitHub. Creating...`);
+                    gitHubRepository = await gitHubService
+                        .createRepository(gitHubOrganizationName, repo.name)
+                        .catch(error => {
+                            logService.error(`Error creating repository ${repo.name} in GitHub: ${error}`);
+                        });
                 } else {
-                    log(`Repository ${repo.name} already exists in GitHub. Skipping...`);
+                    logService.verbose(`Repository ${repo.name} already exists in GitHub. Skipping...`);
                     return; 
                 }
                 let temporaryFolder = os.tmpdir();
-                log(`Cloning the Azure DevOps repo: ${repo.name} to the temporary folder ${temporaryFolder}/${repo.name}`);
+                logService.verbose(`Cloning the Azure DevOps repo: ${repo.name} to the temporary folder ${temporaryFolder}/${repo.name}`);
                 shell.exec(`git clone --bare ${repo.remoteUrl} ${temporaryFolder}\\${repo.name}`);
                 shell.cd(`${temporaryFolder}/${repo.name}`);
-                log(`Puhsing the Azure DevOps repo: ${repo.name} to the GitHub repo: ${gitHubRepository.name}`);
+                logService.verbose(`Puhsing the Azure DevOps repo: ${repo.name} to the GitHub repo: ${gitHubRepository.name}`);
                 shell.exec(`git push --mirror ${gitHubRepository.clone_url}`);
                 shell.cd(`..`);
-                log(`Removing the temporary folder: ${temporaryFolder}/${repo.name}`);
+                logService.verbose(`Removing the temporary folder: ${temporaryFolder}/${repo.name}`);
                 shell.exec(`rm -rf ${repo.name}`);
-                log(`Migration of repository ${repo.name} completed.`);
+                logService.verbose(`Migration of repository ${repo.name} completed.`);
             });
-        }); 
+        })
+        .catch(error => {
+            logService.error(`Error getting repositories in Azure DevOps project ${azdoProject}: ${error}`);
+        });
 }
 function migrateBoards() {
     /*
@@ -104,62 +112,97 @@ function migrateBoards() {
     - Create a new repo in GitHub for the project
     - Create a new repo project 
     */
-    log("Migrating boards...");
+    logService.info(`Migrating boards...`);
     azureDevOpsService
         .getRepos(azdoProject, true, true, false)
         .then(async repos => {
-            log(`Found ${repos.length} repos in Azure DevOps project ${azdoProject}: ${repos.map(repo => repo.name)}`);
+            logService.verbose(`Found ${repos.length} repos in Azure DevOps project ${azdoProject}: ${repos.map(repo => repo.name)}`);
             await azureDevOpsService
                 .getTeams(azdoProject)
                 .then(teams => {
-                    log(`Found ${teams.length} teams in Azure DevOps project ${azdoProject}`);
+                    logService.verbose(`Found ${teams.length} teams in Azure DevOps project ${azdoProject}`);
                     teams.map(async team => {              
-                        const boards = await azureDevOpsService.getBoards(team.projectId, team.projectName, team.id, team.name);
-                        log(`Found ${boards.length} boards in Azure DevOps project ${azdoProject} and team ${team.name}`);
+                        const boards = await azureDevOpsService
+                            .getBoards(team.projectId, team.projectName, team.id, team.name)
+                            .catch(error => {
+                                logService.error(`Error getting boards for team ${team.name}`, error);
+                            });
+                        logService.verbose(`Found ${boards.length} boards in Azure DevOps project ${azdoProject} and team ${team.name}`);
                         boards.map(async board => {                     
-                            let boardDetails = await azureDevOpsService.getBoard(team.projectId, team.projectName, team.id, team.name, board.id);             
+                            let boardDetails = await azureDevOpsService
+                                .getBoard(team.projectId, team.projectName, team.id, team.name, board.id)
+                                .catch(e => {
+                                    logService.error(`Error getting boards ${board.id} from project ${team.projectName}`, e);
+                                });            
                             let project = null;
                             if(repos.length > 1) {
-                                log(`Checking if project ${team.name} ${boardDetails.name} exists in the GitHub organization ${gitHubOrganizationName}`);
-                                project = await gitHubService.getProjectForOrganization(gitHubOrganizationName, boardDetails.name);
+                                logService.verbose(`Checking if project ${team.name} ${boardDetails.name} exists in the GitHub organization ${gitHubOrganizationName}`);
+                                project = await gitHubService
+                                    .getProjectForOrganization(gitHubOrganizationName, boardDetails.name)
+                                    .catch(e => {
+                                        logService.error(`Error creating project ${boardDetails.name}`, e);
+                                    });
                                 if(project == null) {
-                                    log(`Project ${team.name} ${boardDetails.name} does not exist in GitHub. Creating...`);
-                                    project = await gitHubService.createOrgProject(gitHubOrganizationName, `${team.name} ${boardDetails.name}`);
+                                    logService.verbose(`Project ${team.name} ${boardDetails.name} does not exist in GitHub. Creating...`);
+                                    project = await gitHubService
+                                        .createOrgProject(gitHubOrganizationName, `${team.name} ${boardDetails.name}`)
+                                        .catch(e => {
+                                            logService.error(`Error creating project ${team.name} ${boardDetails.name}`, e);
+                                        });
                                 } else {
-                                    log(`Project ${team.name} ${boardDetails.name} already exists in GitHub. Skipping...`);
+                                    logService.verbose(`Project ${team.name} ${boardDetails.name} already exists in GitHub. Skipping...`);
                                     return; 
                                 }
-                                log(`Linking project ${team.name} ${boardDetails.name} to the GitHub repository ${gitHubProject}`);
+                                logService.verbose(`Linking project ${team.name} ${boardDetails.name} to the GitHub repository ${gitHubProject}`);
                                 // TODO: Link repositories to the project
                             } else {
-                                log(`Checking if project ${team.name} exists in the GitHub repository ${gitHubProject}`);
-                                project = await gitHubService.getProject(gitHubProject, boardDetails.name);
+                                logService.verbose(`Checking if project ${team.name} exists in the GitHub repository ${gitHubProject}`);
+                                project = await gitHubService
+                                    .getProject(gitHubProject, boardDetails.name)
+                                    .catch(e => {
+                                        logService.error(`Error getting project ${project.name}`, e);
+                                    });
                                 if(project == null) {
-                                    log(`Project ${team.name} does not exist in GitHub. Creating...`);
-                                    project = await gitHubService.createProject(gitHubProject, `${team.name}`);
+                                    logService.verbose(`Project ${team.name} does not exist in GitHub. Creating...`);
+                                    project = await gitHubService
+                                        .createProject(gitHubProject, `${team.name}`)
+                                        .catch(e => {
+                                            logService.error(`Error creating project ${team.name} ${boardDetails.name}`, e);
+                                        });
                                 } else {
-                                    log(`Project ${team.name} already exists in GitHub. Skipping...`);
+                                    logService.verbose(`Project ${team.name} already exists in GitHub. Skipping...`);
                                     return;
                                 }
                             }
-                            let columns = await gitHubService.getColumns(project.id);
-                            log(`Found ${columns.length} columns in GitHub project ${project.name}: ${columns.map(column => column.name)}`);
+                            let columns = await gitHubService
+                                .getColumns(project.id)
+                                .catch(e => {
+                                    logService.error(`Error getting columns for project ${project.name}`, e);
+                                });
+                            logService.verbose(`Found ${columns.length} columns in GitHub project ${project.name}: ${columns.map(column => column.name)}`);
                             boardDetails.columns.map(async column => {
                                 if(columns.find(c => c.name == column.name) == null) {
-                                    log(`Creating a new column in GitHub project ${project.name}: ${column.name}`);
-                                    await gitHubService.createProjectColumn(project.id, column.name);
+                                    logService.verbose(`Creating a new column in GitHub project ${project.name}: ${column.name}`);
+                                    await gitHubService
+                                        .createProjectColumn(project.id, column.name)
+                                        .catch(e => {
+                                            logService.error(`Error creating column ${column.name} in GitHub project ${project.name}: ${e}`);
+                                        });
                                 } else {
-                                    log(`Column ${column.name} already exists in GitHub project ${project.name}. Skipping...`);
+                                    logService.verbose(`Column ${column.name} already exists in GitHub project ${project.name}. Skipping...`);
                                 }
                                 // TODO create card to each column
                             });
                         });
                     });
-                }); 
+                })
+                .catch(e => {
+                    logService.error(`Error getting teams in Azure DevOps project ${azdoProject}`, e);
+                });
             }); 
 }
 function migrateIterations() {
-    log("Migrating iterations...");
+    logService.info(`Migrating iterations...`);
     azureDevOpsService
         .getTeams(azdoProject)
         .then(teams => {
@@ -174,7 +217,7 @@ function migrateIterations() {
         });  
 }
 function migrateTeamMembers() { 
-    log("Migrating team members...");
+    logService.info(`Migrating team members...`);
     azureDevOpsService.getTeams(azdoProject)
         .then(teams => {
             //let usersToAdd = [];
@@ -196,14 +239,14 @@ function migrateTeamMembers() {
         })
 }
 function migrateWiki() {
-    log("Migrating wiki...");
+    logService.info(`Migrating wiki...`);
     azureDevOpsService.getWikisByProjectName(azdoProject)
         .then(wikis => {
             wikis.map(async wiki => {
                 const pages = await azureDevOpsService.getPagesByWikiId(azdoProject, wiki.id);
                 pages.subPages.map(async page => {
                     const text = await azureDevOpsService.getPageTextByWikiId(azdoProject, wiki.id, page.path);
-                    console.log(text);
+                    logService.log(text);
                     // Currently there isn't an API to create a page in the GItHub wiki
                     // make recursive call to get all subpages of subpages
                 });
@@ -211,7 +254,7 @@ function migrateWiki() {
         });  
 }
 function migrateWorkItems() {
-    log("Migrating workitems...");
+    logService.info(`Migrating workitems...`);
     azureDevOpsService.getTeams(azdoProject)
         .then(teams => {
             teams.map(async team => {
@@ -250,4 +293,21 @@ function migrateWorkItems() {
                 });
             });
         });  
+}
+function cleanProjects() {
+    logService.info(`Cleaning projects...`);
+    gitHubService
+        .getProjectsForOrganization(gitHubOrganizationName)
+        .then(async (projects) => {
+            logService.verbose(`Found ${projects.length} projects in GitHub organization ${gitHubOrganizationName}`);
+            projects.map(async project => {
+                logService.verbose(`Deleting project ${project.id}: ${project.name}`);
+                await gitHubService
+                    .deleteProject(project.id)
+                    .catch(e => {
+                        logService.error(`Error deleting project ${project.id}: ${project.name}`, e);
+                    });
+            });
+            logService.verbose(`Deleted all projects in GitHub organization ${gitHubOrganizationName}`);
+        });
 }

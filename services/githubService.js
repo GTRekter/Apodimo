@@ -54,6 +54,14 @@ class GitHubService {
             return project;
         }
     }
+    async getProjectsForOrganization(org) {
+        const { data } = await this.octokit.rest.projects.listForOrg({
+            org: org,
+            direction: "desc",
+            per_page: 100
+        });
+        return data;
+    }
     async getProjects(owner, repo) {
         const { data } = await this.octokit.rest.projects.listForRepo({
             owner: owner,
@@ -152,5 +160,12 @@ class GitHubService {
     //     });
     //     return data;
     // }  
+
+    // DELETE Methods   
+    async deleteProject(projectId) {
+        await this.octokit.rest.projects.delete({
+            project_id: projectId,
+        });
+    }
 }
 module.exports = GitHubService;

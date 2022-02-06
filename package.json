@@ -21,6 +21,7 @@
   "dependencies": {
     "@octokit/rest": "^18.12.0",
     "azure-devops-node-api": "^11.1.0",
+    "colors": "^1.4.0",
     "dotenv": "^14.3.2",
     "figlet": "^1.5.2",
     "os": "^0.1.2",

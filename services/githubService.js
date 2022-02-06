@@ -17,15 +17,17 @@ class GitHubService {
         });
     }
     async getRepositoriesForOrganization(org) {
-        return await this.octokit.rest.repos.listForOrg({
+        const { data } = await this.octokit.rest.repos.listForOrg({
             org: org
         });
+        return data;
     }   
     async getRepository(owner, repo) {
-        return await this.octokit.rest.repos.get({
+        const { data } = await this.octokit.rest.repos.get({
             owner: owner,
             repo: repo
         });
+        return data;
     } 
     async getRepositoryForOrganization(org, repositoryName) {
         const data = await this.octokit.rest.repos.listForOrg({
@@ -41,13 +43,30 @@ class GitHubService {
     async getUser() {
         return await this.octokit.users.getAuthenticated();
     }
+    async getProjectForOrganization(org, projectName) {
+        const data = await this.octokit.rest.projects.listForOrg({
+            org: org
+        });
+        const project = data.data.find(project => project.name === projectName);
+        if(project === undefined) {
+            return null;
+        } else {
+            return project;
+        }
+    }
     async getProjects(owner, repo) {
         const { data } = await this.octokit.rest.projects.listForRepo({
             owner: owner,
-            repo: repo,
+            repo: repo
         });
         return data;
     }
+    async getColumns(projectId) {
+        const { data } = await this.octokit.rest.projects.listColumns({
+            project_id: projectId,
+        });
+        return data;
+    }  
     // Create/Add Methods
     async addCollaborator(owner, repo, username) {
         // * pull - can pull, but not push to or administer this repository.
@@ -105,21 +124,21 @@ class GitHubService {
     async createOrgProject(org, name) {
         const { data } = await this.octokit.rest.projects.createForOrg({
             org: org,
-            name: name,
+            name: name
         });
         return data;
     }
     async createProjectColumn(projectId, columnName) {
         const { data } = await this.octokit.rest.projects.createColumn({
             project_id: projectId,
-            name: columnName,
+            name: columnName
         });
         return data;
     }
     async createRepository(org, name) {
         const { data } = await this.octokit.rest.repos.createInOrg({
             org: org,
-            name: name,
+            name: name
         });
         return data;
     }

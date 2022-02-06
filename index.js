@@ -44,7 +44,7 @@ gitHubService = new GitHubService(yargs.argv['gitHubToken']);
 azureDevOpsService = new AzureDevOpsService(yargs.argv['azdoToken'], yargs.argv['azdoOrganizationUrl']);
 log("Starting migration...");
 migrateRepositories();
-// migrateBoards();
+migrateBoards();
 // migrateIterations();
 // migrateWorkItems();
 // migrateWiki();
@@ -70,7 +70,7 @@ function migrateRepositories() {
     azureDevOpsService
         .getRepos(azdoProject, true, true, false)
         .then(repos => {
-            log(`Found ${repos.length} repos in Azure DevOps project ${azdoProject}`);
+            log(`Found ${repos.length} repos in Azure DevOps project ${azdoProject}: ${repos.map(repo => repo.name)}`);
             repos.map(async repo => {
                 log(`Checking if repository ${repo.name} exists in GitHub`);
                 let gitHubRepository = await gitHubService.getRepositoryForOrganization(gitHubOrganizationName, repo.name);;
@@ -108,27 +108,49 @@ function migrateBoards() {
     azureDevOpsService
         .getRepos(azdoProject, true, true, false)
         .then(async repos => {
-            log(`Found ${repos.length} repos in Azure DevOps project ${azdoProject}`);
+            log(`Found ${repos.length} repos in Azure DevOps project ${azdoProject}: ${repos.map(repo => repo.name)}`);
             await azureDevOpsService
                 .getTeams(azdoProject)
                 .then(teams => {
-                    teams.map(async team => {
-                        log(`Found ${teams.length} teams in Azure DevOps project ${azdoProject}`);
+                    log(`Found ${teams.length} teams in Azure DevOps project ${azdoProject}`);
+                    teams.map(async team => {              
                         const boards = await azureDevOpsService.getBoards(team.projectId, team.projectName, team.id, team.name);
-                        boards.map(async board => {
-                            log(`Found ${boards.length} boards in Azure DevOps project ${azdoProject}`);
+                        log(`Found ${boards.length} boards in Azure DevOps project ${azdoProject} and team ${team.name}`);
+                        boards.map(async board => {                     
                             let boardDetails = await azureDevOpsService.getBoard(team.projectId, team.projectName, team.id, team.name, board.id);             
                             let project = null;
                             if(repos.length > 1) {
-                                log(`Creating a new org project in GitHub for the Azure DevOps board: ${team.name} ${boardDetails.name}`);
-                                project = await gitHubService.createOrgProject(gitHubOrganizationName, `${team.name} ${boardDetails.name}`);
-                            } else {
-                                log(`Creating a new repo project in GitHub for the Azure DevOps board: ${team.name} ${boardDetails.name}`);
-                                project = await gitHubService.createRepoProject(gitHubUsername, gitHubProject, `${team.name} ${boardDetails.name}`);
+                                log(`Checking if project ${team.name} ${boardDetails.name} exists in the GitHub organization ${gitHubOrganizationName}`);
+                                project = await gitHubService.getProjectForOrganization(gitHubOrganizationName, boardDetails.name);
+                                if(project == null) {
+                                    log(`Project ${team.name} ${boardDetails.name} does not exist in GitHub. Creating...`);
+                                    project = await gitHubService.createOrgProject(gitHubOrganizationName, `${team.name} ${boardDetails.name}`);
+                                } else {
+                                    log(`Project ${team.name} ${boardDetails.name} already exists in GitHub. Skipping...`);
+                                    return; 
+                                }
+                                log(`Linking project ${team.name} ${boardDetails.name} to the GitHub repository ${gitHubProject}`);
                                 // TODO: Link repositories to the project
+                            } else {
+                                log(`Checking if project ${team.name} exists in the GitHub repository ${gitHubProject}`);
+                                project = await gitHubService.getProject(gitHubProject, boardDetails.name);
+                                if(project == null) {
+                                    log(`Project ${team.name} does not exist in GitHub. Creating...`);
+                                    project = await gitHubService.createProject(gitHubProject, `${team.name}`);
+                                } else {
+                                    log(`Project ${team.name} already exists in GitHub. Skipping...`);
+                                    return;
+                                }
                             }
+                            let columns = await gitHubService.getColumns(project.id);
+                            log(`Found ${columns.length} columns in GitHub project ${project.name}: ${columns.map(column => column.name)}`);
                             boardDetails.columns.map(async column => {
-                                await gitHubService.createProjectColumn(project.id, column.name)
+                                if(columns.find(c => c.name == column.name) == null) {
+                                    log(`Creating a new column in GitHub project ${project.name}: ${column.name}`);
+                                    await gitHubService.createProjectColumn(project.id, column.name);
+                                } else {
+                                    log(`Column ${column.name} already exists in GitHub project ${project.name}. Skipping...`);
+                                }
                                 // TODO create card to each column
                             });
                         });

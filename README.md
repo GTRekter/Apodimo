@@ -30,9 +30,9 @@ In this project I used the following libraries:
 
 ## Generate a new Azure DevOps PAT
 1. Browse and Sign in to your organization in Azure DevOps
-2. In the upper-right corner of any page, click your profile photo, and then select **Personal access tokens**.
+2. In the upper-right corner of any page, click your profile photo, then click the more option button on the right of Switch directory, click User settings and then select **Personal access tokens**.
 3. Select **+ New Token**.
-4. Select the **Full Control** scope 
+4. Select the **Full access** scope 
 
 # Run
 To run the script you can:

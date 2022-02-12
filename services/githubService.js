@@ -42,7 +42,7 @@ class GitHubService {
             repos.push(...data.data);            
         }
 
-        const repo = repos.find(x => x.name === repositoryName);
+        const repo = repos.find(repo => repo.name === repositoryName);
         if(repo === undefined) {
             return null;
         } else {
@@ -53,10 +53,19 @@ class GitHubService {
         return await this.octokit.users.getAuthenticated();
     }
     async getProjectForOrganization(org, projectName) {
-        const data = await this.octokit.rest.projects.listForOrg({
-            org: org
-        });
-        const project = data.data.find(project => project.name === projectName);
+        let projs = [];
+        let page = 1;
+        while(true) {
+            const data = await this.octokit.rest.projects.listForOrg({
+                org: org, page:page++
+            });
+            if(data.data.length == 0) {
+                break;
+            }
+            projs.push(...data.data);
+        }
+
+        const project = projs.find(project => project.name === projectName);
         if(project === undefined) {
             return null;
         } else {

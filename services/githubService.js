@@ -20,6 +20,7 @@ class GitHubService {
         const { data } = await this.octokit.rest.repos.listForOrg({
             org: org
         });
+        console.log(data);
         return data;
     }   
     async getRepository(owner, repo) {
@@ -30,10 +31,19 @@ class GitHubService {
         return data;
     } 
     async getRepositoryForOrganization(org, repositoryName) {
-        const data = await this.octokit.rest.repos.listForOrg({
-            org: org
-        });
-        const repo = data.data.find(repo => repo.name === repositoryName);
+        let repos = [];
+        let page = 1;
+        while(true) {
+            const data = await this.octokit.rest.repos.listForOrg({
+                org: org, page:page++
+            });
+            if(data.data.length == 0) {
+                break;
+            }
+            repos.push(...data.data);            
+        }
+
+        const repo = repos.find(x => x.name === repositoryName);
         if(repo === undefined) {
             return null;
         } else {

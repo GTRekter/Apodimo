@@ -2,6 +2,9 @@ const { Octokit } = require("@octokit/rest");
 
 class GitHubService {
     octokit = null;
+    maxItemsPerPage = 1;
+    firstPage = 1;
+
     constructor(token) {
         this.octokit = new Octokit({
             auth: token
@@ -31,16 +34,17 @@ class GitHubService {
     } 
     async getRepositoryForOrganization(org, repositoryName) {
         let repos = [];
-        let page = 1;
-        while(true) {
-            const data = await this.octokit.rest.repos.listForOrg({
-                org: org, page:page++
-            });
-            if(data.data.length == 0) {
-                break;
-            }
-            repos.push(...data.data);            
-        }
+        let page = this.firstPage;
+        let data;
+        do {
+            data = (await this.octokit.rest.repos.listForOrg({
+                org: org,
+                page: page++,
+                per_page: this.maxItemsPerPage
+            })).data;
+            
+            repos.push(...data);
+        } while(data.length == this.maxItemsPerPage);
 
         const repo = repos.find(repo => repo.name === repositoryName);
         if(repo === undefined) {
@@ -54,16 +58,17 @@ class GitHubService {
     }
     async getProjectForOrganization(org, projectName) {
         let projs = [];
-        let page = 1;
-        while(true) {
-            const data = await this.octokit.rest.projects.listForOrg({
-                org: org, page:page++
-            });
-            if(data.data.length == 0) {
-                break;
-            }
-            projs.push(...data.data);
-        }
+        let page = this.firstPage;
+        let data;
+        do {
+            data = (await this.octokit.rest.projects.listForOrg({
+                org: org,
+                page: page++,
+                per_page: this.maxItemsPerPage
+            })).data;
+
+            projs.push(...data);
+        } while(data.length == this.maxItemsPerPage);
 
         const project = projs.find(project => project.name === projectName);
         if(project === undefined) {

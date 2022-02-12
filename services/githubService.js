@@ -2,7 +2,7 @@ const { Octokit } = require("@octokit/rest");
 
 class GitHubService {
     octokit = null;
-    maxItemsPerPage = 1;
+    maxItemsPerPage = 100;
     firstPage = 1;
 
     constructor(token) {

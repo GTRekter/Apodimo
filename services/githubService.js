@@ -20,7 +20,6 @@ class GitHubService {
         const { data } = await this.octokit.rest.repos.listForOrg({
             org: org
         });
-        console.log(data);
         return data;
     }   
     async getRepository(owner, repo) {

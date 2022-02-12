@@ -90,11 +90,15 @@ function migrateRepositories() {
                 logService.verbose(`Cloning the Azure DevOps repo: ${repo.name} to the temporary folder ${temporaryFolder}/${repo.name}`);
                 shell.exec(`git clone --bare ${repo.remoteUrl} ${temporaryFolder}\\${repo.name}`);
                 shell.cd(`${temporaryFolder}/${repo.name}`);
-                logService.verbose(`Puhsing the Azure DevOps repo: ${repo.name} to the GitHub repo: ${gitHubRepository.name}`);
+                logService.verbose(`Pushing the Azure DevOps repo: ${repo.name} to the GitHub repo: ${gitHubRepository.name}`);
                 shell.exec(`git push --mirror ${gitHubRepository.clone_url}`);
                 shell.cd(`..`);
                 logService.verbose(`Removing the temporary folder: ${temporaryFolder}/${repo.name}`);
-                shell.exec(`rm -rf ${repo.name}`);
+                if(process.platform === 'win32') {
+                    shell.exec(`rmdir ${repo.name} /s /q`);
+                } else {
+                    shell.exec(`rm -rf ${repo.name}`);
+                }
                 logService.verbose(`Migration of repository ${repo.name} completed.`);
             });
         })

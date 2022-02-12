@@ -2,6 +2,9 @@ const { Octokit } = require("@octokit/rest");
 
 class GitHubService {
     octokit = null;
+    maxItemsPerPage = 100;
+    firstPage = 1;
+
     constructor(token) {
         this.octokit = new Octokit({
             auth: token
@@ -30,10 +33,20 @@ class GitHubService {
         return data;
     } 
     async getRepositoryForOrganization(org, repositoryName) {
-        const data = await this.octokit.rest.repos.listForOrg({
-            org: org
-        });
-        const repo = data.data.find(repo => repo.name === repositoryName);
+        let repos = [];
+        let page = this.firstPage;
+        let data;
+        do {
+            data = (await this.octokit.rest.repos.listForOrg({
+                org: org,
+                page: page++,
+                per_page: this.maxItemsPerPage
+            })).data;
+            
+            repos.push(...data);
+        } while(data.length == this.maxItemsPerPage);
+
+        const repo = repos.find(repo => repo.name === repositoryName);
         if(repo === undefined) {
             return null;
         } else {
@@ -44,10 +57,20 @@ class GitHubService {
         return await this.octokit.users.getAuthenticated();
     }
     async getProjectForOrganization(org, projectName) {
-        const data = await this.octokit.rest.projects.listForOrg({
-            org: org
-        });
-        const project = data.data.find(project => project.name === projectName);
+        let projs = [];
+        let page = this.firstPage;
+        let data;
+        do {
+            data = (await this.octokit.rest.projects.listForOrg({
+                org: org,
+                page: page++,
+                per_page: this.maxItemsPerPage
+            })).data;
+
+            projs.push(...data);
+        } while(data.length == this.maxItemsPerPage);
+
+        const project = projs.find(project => project.name === projectName);
         if(project === undefined) {
             return null;
         } else {
